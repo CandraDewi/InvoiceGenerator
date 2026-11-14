@@ -203,13 +203,7 @@ async function pdf(id){
  const summaryHeight=79+paymentRowHeight(danaInfo)+paymentRowHeight(bcaInfo)+(notesLines.length?11+notesLines.length*LINE_HEIGHT:0);
 
  preparedItems.forEach((it,index)=>{
-  const restHeight=preparedItems.slice(index).reduce((total,item)=>total+rowHeight(item.descriptionLines.length),0);
-  // P3: Kurangi halaman yang hanya berisi total; pindahkan kelompok item terakhir
-  // bersama ringkasan jika halaman saat ini sudah cukup terisi.
-  if(index>0 && y>200 && y+restHeight+summaryHeight>BOTTOM &&
-     restHeight+summaryHeight<=BOTTOM-44){
-   nextPage(true);
-  }
+
   let nextLine=0;
   while(nextLine<it.descriptionLines.length){
    // P1: Potong BARIS berdasarkan ruang halaman, bukan memotong karakter deskripsi.
