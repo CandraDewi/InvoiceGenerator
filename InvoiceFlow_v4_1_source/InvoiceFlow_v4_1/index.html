@@ -238,6 +238,10 @@ async function pdf(id){
  y+=11;doc.setFont('helvetica','bold');doc.setFontSize(13);
  doc.text('TOTAL',130,y);doc.text(money(x.total),RIGHT,y,{align:'right'});
 
+if (x.status === 'Paid') {
+  doc.addImage(STAMP_LUNAS_PNG, 'PNG', 65, y - 22, 54, 29, 'stamp-lunas', 'FAST');
+}
+
  ensureSpace(20);
  y+=20;doc.setFont('helvetica','bold');doc.setFontSize(9);
  doc.text('Status: '+(x.status==='Paid'?'LUNAS':'BELUM DIBAYAR'),LEFT,y);
