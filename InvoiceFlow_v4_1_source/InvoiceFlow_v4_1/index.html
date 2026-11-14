@@ -239,7 +239,7 @@ async function pdf(id){
  doc.text('TOTAL',130,y);doc.text(money(x.total),RIGHT,y,{align:'right'});
 
 if (x.status === 'Paid') {
-  doc.addImage(STAMP_LUNAS_PNG, 'PNG', 65, y - 22, 54, 29, 'stamp-lunas', 'FAST');
+  doc.addImage(STAMP_LUNAS_PNG, 'PNG', 132, y - 28, 58, 36, 'stamp-lunas', 'FAST');
 }
 
  ensureSpace(20);
