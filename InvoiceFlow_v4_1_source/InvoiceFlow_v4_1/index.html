@@ -20,7 +20,7 @@
 <div class="panel"><h2>Rincian item</h2><div class="tablewrap"><table class="line"><thead><tr><th>Deskripsi</th><th>Qty</th><th>Harga satuan</th><th></th></tr></thead><tbody id="items"></tbody></table></div><div class="actions"><button class="btn secondary" id="addItem">＋ Tambah item</button></div><div class="totals"><div><span>Subtotal</span><b id="subtotal">Rp0</b></div><div><label>Diskon (Rp)</label><input id="discount" type="number" min="0" value="0" style="width:110px"></div><div class="grand"><span>Total</span><b id="total">Rp0</b></div></div><div class="actions"><button class="btn" id="save">Simpan invoice</button><button class="btn secondary" id="clear">Kosongkan</button></div></div></section>
 <section class="page" id="history"><div class="panel"><h2>Riwayat invoice</h2><div class="filterbar"><input id="searchInvoice" placeholder="Cari nomor invoice / pelanggan"><input id="filterFrom" type="date" aria-label="Dari tanggal"><input id="filterTo" type="date" aria-label="Sampai tanggal"><select id="filterStatus"><option value="">Semua status</option><option value="Paid">Lunas</option><option value="Unpaid">Belum dibayar</option></select></div><div class="tablewrap"><table><thead><tr><th>Nomor</th><th>Pelanggan</th><th>Tanggal</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="allInvoices"></tbody></table></div></div></section>
 <section class="page" id="customers"><div class="panel"><h2>Tambah pelanggan</h2><div class="grid2"><div class="field"><label>Nama pelanggan *</label><input id="cname" placeholder="Nama individu / perusahaan"></div><div class="field"><label>Nomor telepon</label><input id="cphone" type="tel" placeholder="08xxxxxxxxxx"></div></div><div class="actions"><button class="btn" id="addCustomer">Simpan pelanggan</button></div></div><div class="panel"><h2>Database pelanggan</h2><div id="customerList"></div></div></section>
-<section class="page" id="profile"><div class="panel"><h2>Profil bisnis</h2><div class="field"><label>NAMA BISNIS</label><input value="BENGKEL ADITYA MOTOR" readonly></div><p class="muted">Nama ini digunakan otomatis pada invoice. Logo tidak digunakan.</p></div><div class="panel"><h2>Informasi pembayaran</h2><div class="notice">Isi nomor tujuan pembayaran agar tercetak pada setiap PDF invoice.</div><div class="grid2"><div class="field"><label>Nomor DANA</label><input id="danaNumber" placeholder="08xxxxxxxxxx"></div><div class="field"><label>Nama pemilik DANA</label><input id="danaHolder" placeholder="Nama sesuai akun DANA"></div><div class="field"><label>Nomor rekening BCA</label><input id="bcaNumber" placeholder="Nomor rekening BCA"></div><div class="field"><label>Nama pemilik rekening BCA</label><input id="bcaHolder" placeholder="Nama sesuai rekening BCA"></div></div><div class="actions"><button class="btn" id="saveProfile">Simpan informasi pembayaran</button></div></div></section>
+<section class="page" id="profile"><div class="panel"><h2>Profil bisnis</h2><div class="field"><label>NAMA BISNIS</label><input value="BENGKEL ADITYA MOTOR" readonly></div><p class="muted">Logo bisnis ditampilkan pada bagian header PDF invoice.</p></div><div class="panel"><h2>Informasi pembayaran</h2><div class="notice">Isi nomor tujuan pembayaran agar tercetak pada setiap PDF invoice.</div><div class="grid2"><div class="field"><label>Nomor DANA</label><input id="danaNumber" placeholder="08xxxxxxxxxx"></div><div class="field"><label>Nama pemilik DANA</label><input id="danaHolder" placeholder="Nama sesuai akun DANA"></div><div class="field"><label>Nomor rekening BCA</label><input id="bcaNumber" placeholder="Nomor rekening BCA"></div><div class="field"><label>Nama pemilik rekening BCA</label><input id="bcaHolder" placeholder="Nama sesuai rekening BCA"></div></div><div class="actions"><button class="btn" id="saveProfile">Simpan informasi pembayaran</button></div></div></section>
 </main></div>
 <script>
 const SUPABASE_URL='https://ehreccoahtzctmevgqcp.supabase.co';
@@ -121,6 +121,14 @@ async function pdf(id){
  if(!x)return;
  const {jsPDF}=window.jspdf;
  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+ let logo = null;
+
+ try {
+  logo = await loadPdfImage('./LOGO%20GABUNG%201.png');
+ } catch (error) {
+  console.warn('Logo tidak berhasil dimuat:', error);
+ }
+ 
  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
  const LEFT=16,RIGHT=W-16,BOTTOM=H-25;
  const DESCRIPTION_X=19,DESCRIPTION_WIDTH=96;
@@ -129,38 +137,109 @@ async function pdf(id){
  const seller='BENGKEL ADITYA MOTOR';
  let y=0;
 
- // P3: Setiap halaman memiliki header/identitas invoice dan ruang footer yang tetap.
- function drawPageHeader(isFirst){
-  doc.setFillColor(20,36,58);
-  doc.rect(0,0,W,isFirst?42:24,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold');
-  if(isFirst){
-   doc.setFontSize(22);doc.text('INVOICE',LEFT,22);
-   doc.setFontSize(10);doc.text(x.invoice_number,RIGHT,19,{align:'right'});
-   doc.setFont('helvetica','normal');doc.setFontSize(9);
-   doc.text('Tanggal invoice: '+(x.invoice_date||'-'),RIGHT,29,{align:'right'});
-   doc.setTextColor(30,41,59);doc.setFont('helvetica','bold');doc.setFontSize(12);
-   doc.text(seller,LEFT,58);
-   doc.setFontSize(10);doc.text('DITAGIHKAN KEPADA',LEFT,82);
-   doc.setFont('helvetica','normal');
-   const customer=x.customer_snapshot||{};
-   const customerName=doc.splitTextToSize(customer.name||'Pelanggan',178);
-   doc.text(customerName,LEFT,90,{lineHeightFactor:1.18});
-   let lastCustomerLine=90+(customerName.length-1)*4.2;
-   if(customer.phone){
-    const customerPhone=doc.splitTextToSize(String(customer.phone),178);
-    doc.text(customerPhone,LEFT,lastCustomerLine+7,{lineHeightFactor:1.18});
-    lastCustomerLine+=7+(customerPhone.length-1)*4.2;
-   }
-   y=Math.max(116,lastCustomerLine+16);
-  }else{
-   doc.setFontSize(10);doc.text(seller,LEFT,15);
-   doc.setFontSize(9);doc.text(x.invoice_number,RIGHT,15,{align:'right'});
-   doc.setTextColor(30,41,59);
-   y=34;
-  }
+ function loadPdfImage(src) {
+  return new Promise((resolve, reject) => {
+   const img = new Image();
+   img.onload = () => resolve(img);
+   img.onerror = () => reject(new Error('Logo gagal dimuat'));
+   img.src = src;
+  });
  }
+ // P3: Setiap halaman memiliki header/identitas invoice dan ruang footer yang tetap.
+ 
+ function drawPageHeader(isFirst){
+   // Background cream muda
+   doc.setFillColor(248,246,241);
+   doc.rect(0,0,W,isFirst?50:30,'F');
+ 
+   doc.setTextColor(20,36,58);
+   doc.setFont('helvetica','bold');
+ 
+   if(isFirst){
+ 
+     // LOGO ASLI - tidak dimodifikasi
+     if(logo){
+       doc.addImage(logo,'PNG',LEFT,5,40,40);
+     }
+ 
+     // Judul invoice di sebelah kanan
+     doc.setFontSize(22);
+     doc.text('INVOICE',RIGHT,16,{align:'right'});
+ 
+     // Nomor invoice
+     doc.setFontSize(10);
+     doc.text(x.invoice_number,RIGHT,27,{align:'right'});
+ 
+     // Tanggal invoice
+     doc.setFont('helvetica','normal');
+     doc.setFontSize(9);
+     doc.text(
+       'Tanggal invoice: '+(x.invoice_date||'-'),
+       RIGHT,35,{align:'right'}
+     );
+ 
+     // Identitas penjual
+     doc.setTextColor(30,41,59);
+     doc.setFont('helvetica','bold');
+     doc.setFontSize(12);
+     doc.text(seller,LEFT,64);
+ 
+     // Identitas pelanggan
+     doc.setFontSize(10);
+     doc.text('DITAGIHKAN KEPADA',LEFT,86);
+ 
+     doc.setFont('helvetica','normal');
+ 
+     const customer=x.customer_snapshot||{};
+     const customerName=doc.splitTextToSize(
+       customer.name||'Pelanggan',178
+     );
+ 
+     doc.text(customerName,LEFT,94,{lineHeightFactor:1.18});
+ 
+     let lastCustomerLine=94+(customerName.length-1)*4.2;
+ 
+     if(customer.phone){
+       const customerPhone=doc.splitTextToSize(
+         String(customer.phone),178
+       );
+ 
+       doc.text(
+         customerPhone,LEFT,lastCustomerLine+7,
+         {lineHeightFactor:1.18}
+       );
+ 
+       lastCustomerLine+=7+(customerPhone.length-1)*4.2;
+     }
+ 
+     y=Math.max(120,lastCustomerLine+16);
+ 
+   }else{
+ 
+     // Header halaman lanjutan
+     if(logo){
+       doc.addImage(logo,'PNG',LEFT,3,24,24);
+     }
+ 
+     doc.setFont('helvetica','bold');
+     doc.setFontSize(14);
+     doc.text('INVOICE',RIGHT,10,{align:'right'});
+ 
+     doc.setFontSize(8);
+     doc.text(x.invoice_number,RIGHT,18,{align:'right'});
+ 
+     doc.setFont('helvetica','normal');
+     doc.setFontSize(8);
+     doc.text(
+       'Tanggal invoice: '+(x.invoice_date||'-'),
+       RIGHT,25,{align:'right'}
+     );
+ 
+     doc.setTextColor(30,41,59);
+     y=36;
+   }
+ }
+
  function tableHeader(){
   doc.setFillColor(238,242,248);doc.rect(LEFT,y,W-32,10,'F');
   doc.setTextColor(30,41,59);doc.setFont('helvetica','bold');doc.setFontSize(9);
