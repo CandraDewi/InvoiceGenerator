@@ -148,11 +148,12 @@ async function pdf(id){
  // P3: Setiap halaman memiliki header/identitas invoice dan ruang footer yang tetap.
  
  function drawPageHeader(isFirst){
-   // Background cream muda
-   doc.setFillColor(248,246,241);
+   // Background header abu-abu #616161
+   doc.setFillColor(97,97,97);
    doc.rect(0,0,W,isFirst?50:30,'F');
  
-   doc.setTextColor(20,36,58);
+   // Teks di atas header gelap menggunakan warna putih agar kontras
+   doc.setTextColor(255,255,255);
    doc.setFont('helvetica','bold');
  
    if(isFirst){
@@ -173,35 +174,38 @@ async function pdf(id){
      // Tanggal invoice
      doc.setFont('helvetica','normal');
      doc.setFontSize(9);
+     doc.setTextColor(235,235,235);
      doc.text(
        'Tanggal invoice: '+(x.invoice_date||'-'),
        RIGHT,35,{align:'right'}
      );
  
-     // Identitas penjual
+     // Baris identitas: "DITAGIHKAN KEPADA" (kiri) sejajar dengan nama bisnis (kanan)
+     const IDENTITY_Y=62;
      doc.setTextColor(30,41,59);
      doc.setFont('helvetica','bold');
+     doc.setFontSize(10);
+     doc.text('DITAGIHKAN KEPADA',LEFT,IDENTITY_Y);
+ 
      doc.setFontSize(12);
-     doc.text(seller,LEFT,64);
+     doc.text(seller,RIGHT,IDENTITY_Y,{align:'right'});
  
      // Identitas pelanggan
-     doc.setFontSize(10);
-     doc.text('DITAGIHKAN KEPADA',LEFT,86);
- 
      doc.setFont('helvetica','normal');
+     doc.setFontSize(10);
  
      const customer=x.customer_snapshot||{};
      const customerName=doc.splitTextToSize(
-       customer.name||'Pelanggan',178
+       customer.name||'Pelanggan',115
      );
  
-     doc.text(customerName,LEFT,94,{lineHeightFactor:1.18});
+     doc.text(customerName,LEFT,IDENTITY_Y+8,{lineHeightFactor:1.18});
  
-     let lastCustomerLine=94+(customerName.length-1)*4.2;
+     let lastCustomerLine=IDENTITY_Y+8+(customerName.length-1)*4.2;
  
      if(customer.phone){
        const customerPhone=doc.splitTextToSize(
-         String(customer.phone),178
+         String(customer.phone),115
        );
  
        doc.text(
@@ -212,7 +216,8 @@ async function pdf(id){
        lastCustomerLine+=7+(customerPhone.length-1)*4.2;
      }
  
-     y=Math.max(120,lastCustomerLine+16);
+     // Tabel dinaikkan: cukup beri jarak 12 mm dari baris terakhir data pelanggan
+     y=Math.max(86,lastCustomerLine+12);
  
    }else{
  
@@ -230,6 +235,7 @@ async function pdf(id){
  
      doc.setFont('helvetica','normal');
      doc.setFontSize(8);
+     doc.setTextColor(235,235,235);
      doc.text(
        'Tanggal invoice: '+(x.invoice_date||'-'),
        RIGHT,25,{align:'right'}
